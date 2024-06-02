@@ -1,0 +1,12 @@
+{
+    "name": "MarioMaker",
+    "author": "Pedro",
+    "creator": "Pedra",
+    "description": "You called?",
+    "entry": "index.js",
+    "version": "1.0.0",
+    "requires": [
+      "PogData",
+      "RenderLib"
+    ]
+  }
