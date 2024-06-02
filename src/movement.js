@@ -23,7 +23,7 @@ export function setKeys() {
  */
 export function runLine(line) {
     // Regex argument
-    const action = line.match(/^(\d*)([a-zA-Z]*)(\d*)$/);
+    const action = line.match(/^(\d*\.?\d*)([a-zA-Z]*)(\d*\.?\d*)$/);
     if (!action) return;
 
     // Set timeout and keys
