@@ -2,6 +2,8 @@ import data from "./data";
 import { BACK, FORWARD, LEFT, LOGO_1, MOUSE, RIGHT } from "./constants";
 
 
+let executing = false;
+
 /**
  * Sets the keys to their default state. 
  */
@@ -48,14 +50,18 @@ export function runLine(line) {
                 ChatLib.chat(`${LOGO_1}§7Lifting: ${key.getDescription()}...`);
             }, raise * 1000);
         }
+        executing = false;
     }, delay * 1000 + offset);
 }
 
 // Check for player on checkpoint every 2 seconds
 const track = register("step", () => {
+    if (executing) return;
+
     const pos = `${Player.getX().toFixed(2)}, ${Player.getY().toFixed(2)}, ${Player.getZ().toFixed(2)}`;
     if (pos in data.checkpoints) {
         // Press based on user command
+        executing = true;
         setKeys();
         data.checkpoints[pos].forEach(arg => {
             runLine(arg);
