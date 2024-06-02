@@ -35,8 +35,8 @@ ${LOGO_1} §6Instruction Manual:
  §b/mm save [key] §8- §7Saves checkpoints as a preset.
  §b/mm load [key] §8- §fLoads a preset of checkpoints.
  §b/mm delete [key] §8- §7Deletes a preset of checkpoints.
- §b/mm import [key] §8- §fImports a preset of checkpoints from clipboard.
- §b/mm export [key] §8- §7Copies a preset of checkpoints to clipboard.
+ §b/mm import §8- §fImports a preset of checkpoints from clipboard.
+ §b/mm export §8- §7Copies a preset of checkpoints to clipboard.
  §b/mm list §8- §fLists all presets.
 
 §3Checkpoint Guide (§b/mm check [...args§b]§3):
@@ -61,28 +61,29 @@ if (data.newUser) {
  * Prints a list of items to chat.
  * 
  * @param {Object} list - The list to be printed.
+ * @param {String} name - The name of the list.
  * @param {Number} page - The page number to display.
  */
-function printList(list, page) {
+function printList(list, name, page) {
     if (isNaN(page)) page = 1;
 
-    ChatLib.clearChat(5858);
+    ChatLib.clearChat(5589);
     const length = Object.keys(list).length;
     const total = Math.ceil(length / 12) || 1;
     page = MathLib.clamp(page, 1, total);
 
     // Print out header
-    const message = new Message("\n&c&m-----------------------------------------------------&r").setChatLineId(5858);
+    const message = new Message("\n&c&m-----------------------------------------------------&r").setChatLineId(5589);
     const header = ChatLib.getCenteredText(`${LOGO_1} ${page > 1 ? "<< " : ""}(Page ${page} of ${total})${page < total ? " >>" : ""}`);
     const whitespace = header.match(/^\s+/)[0];
     
     const lArrow = new TextComponent("&r&e&l<<&r&9")
         .setClickAction("run_command")
-        .setClickValue(`/mm delete ${page - 1}`)
+        .setClickValue(`/mm ${name} ${page - 1}`)
         .setHoverValue(`§eClick to view page ${page - 1}.`);
     const rArrow = new TextComponent("&r&e&l>>")
         .setClickAction("run_command")
-        .setClickValue(`/mm ${LOGO_1} list ${page + 1}`)
+        .setClickValue(`/mm ${name} ${page + 1}`)
         .setHoverValue(`§eClick to view page ${page + 1}.`);
     message.addTextComponent(whitespace);
     
@@ -95,12 +96,13 @@ function printList(list, page) {
     if (length === 0) message.addTextComponent(`\n` + ChatLib.getCenteredText("  §e404, This list is empty!"));
     else {
         const keys = Object.keys(list);
+        const command = name === "checkpoints" ? "remove" : "delete";
         for (let i = pageIndex; i < Math.min(pageIndex + 12, length); i++) {
             let key = keys[i];
             message.addTextComponent("\n §8⁍ ");
             message.addTextComponent(new TextComponent(`§6${key}`)
                 .setClickAction("run_command")
-                .setClickValue(`/va ${LOGO_1} remove ${key}`)
+                .setClickValue(`/mm ${command} ${key}`)
                 .setHoverValue(`§eClick to remove §b${key} §efrom list.`)
             );
             message.addTextComponent(new TextComponent(` §7=> §e${list[key]}`));
@@ -116,11 +118,11 @@ function printList(list, page) {
 register("command", (...args) => {
     const command = args.slice(1);
     switch(args[0]) {
-        case "help":
+        case "help":  // Help message
             help();
             break;
+        case "check":  // Create a checkpoint
         case "add":
-        case "check":
         case "run":
             // Check if valid command
             if (command.length === 0) {
@@ -142,11 +144,12 @@ register("command", (...args) => {
             }
 
             break;
-        case "list":
-            printList(data.checkpoints, command[1]);
+        case "checkpoints":  // Print out all checkpoints
+        case "checkpoint":
+        case "cp":
+            printList(data.checkpoints, "checkpoints", command[1]);
             break;
-        case "toggle":
-            // Toggles module
+        case "toggle":  // Toggle module
             data.toggle = !data.toggle;
             if (data.toggle) {
                 track.register();
@@ -156,9 +159,8 @@ register("command", (...args) => {
                 ChatLib.chat(LOGO_1 + "§cModule is now inactive!");
             }
             break;
-        case "render":
+        case "render":  // Toggle rendering
         case "show":
-            // Toggles waypoint rendering
             data.render = !data.render;
             if (data.render) {
                 render.register();
@@ -168,8 +170,7 @@ register("command", (...args) => {
                 ChatLib.chat(LOGO_1 + "§cHiding all checkpoints!");
             }
             break;
-        case "delete":
-        case "pop":
+        case "pop":  // Delete closest checkpoint
             const x = Player.getX();
             const y = Player.getY();
             const z = Player.getZ();
@@ -192,11 +193,45 @@ register("command", (...args) => {
                 ChatLib.chat(LOGO_1 + "§aDeleted closest checkpoint!");
             } else ChatLib.chat(LOGO_1 + "§cCould not locate a checkpoint...");
             break;
-        case "clear":
+        case "remove":  // Delete a checkpoint
+            delete data.checkpoints[args[1]];
+            ChatLib.chat(LOGO_1 + "§aSuccessfully removed checkpoint!");
+            break;
+        case "clear":  // Reset all checkpoints
         case "reset":
-            // Reset all checkpoints
             data.checkpoints = {};
             ChatLib.chat(LOGO_1 + "§aSuccessfully reset checkpoints!");
+            break;
+        case "save":  // Save checkpoints as a preset
+            data.presets[args[1]] = data.checkpoints;
+            ChatLib.chat(LOGO_1 + "§aSuccessfully saved preset!");
+            break;
+        case "load":  // Load a preset of checkpoints
+            data.checkpoints = data.presets[args[1]];
+            ChatLib.chat(LOGO_1 + "§aSuccessfully loaded preset!");
+            break;
+        case "delete":  // Delete a preset of checkpoints
+            delete data.presets[args[1]];
+            ChatLib.chat(LOGO_1 + "§aSuccessfully deleted preset!");
+            break;
+        case "import":  // Import a preset of checkpoints from clipboard
+            const Toolkit = Java.type("java.awt.Toolkit");
+            const DataFlavor = Java.type("java.awt.datatransfer.DataFlavor");
+
+            try {
+                const clipboard = Toolkit.getDefaultToolkit().getSystemClipboard().getData(DataFlavor.stringFlavor);
+                data.checkpoints = JSON.parse(FileLib.decodeBase64(clipboard));
+                ChatLib.chat(LOGO_1 + "§aSuccessfully imported checkpoints!");
+            } catch (error) {
+                ChatLib.chat(LOGO_1 + "§cError: Invalid Clipboard Data!");
+            }
+            break;
+        case "export":  // Copy a preset of checkpoints to clipboard
+            ChatLib.command(`ct copy ${FileLib.encodeBase64(JSON.stringify(data.checkpoints))}`, true);
+            ChatLib.chat(LOGO_1 + "§aSuccessfully copied checkpoints to clipboard!");
+            break;
+        case "list":  // List all presets
+            printList(data.presets, args[1]);
             break;
         default:
             ChatLib.chat(LOGO_1 + `§cError: Invalid Argument: "${args[0]}"!`);
