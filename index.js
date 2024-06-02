@@ -14,39 +14,102 @@ const render = register("renderWorld", () => {
 });
 if (!data.render) render.unregister();
 
-// Help command
+/**
+ * Prints out a help message to chat.
+ */
 function help() {
-    ChatLib.chat("\n" + LOGO_1 + "§6Instruction Manual:\n");
+    ChatLib.chat(`
+${LOGO_1} §6Instruction Manual:
 
-    // Commands
-    ChatLib.chat("§3Commands:");
-    ChatLib.chat(" §b/mm help §8- §7Shows this message...");
-    ChatLib.chat(" §b/mm check §8- §fCreates a checkpoint at current player position (refer to bottom for special arguments).");
-    ChatLib.chat(" §b/mm run §8- §7Runs a line of \"code\", arguments same as `/mm check` but for one time use.");
-    ChatLib.chat(" §b/mm list §8- §fPrints out all checkpoints.");
-    ChatLib.chat(" §b/mm toggle §8- §7Turns module ON/OFF.");
-    ChatLib.chat(" §b/mm show §8- §fTurns waypoint rendering ON/OFF.");
-    ChatLib.chat(" §b/mm pop §8- §7Deletes the closest checkpoint to player.");
-    ChatLib.chat(" §b/mm reset §8- §fDeletes all checkpoints.");
+§3Commands:");
+ §b/mm help §8- §7Shows this message...
+ §b/mm check §8- §fCreates a checkpoint at current player position (refer to bottom for special arguments).
+ §b/mm run §8- §7Runs a line of "code", arguments same as \`/mm check\` but for one time use.
+ §b/mm checkpoints §8- §fPrints out all checkpoints.
+ §b/mm toggle §8- §7Turns module ON/OFF.
+ §b/mm show §8- §fTurns waypoint rendering ON/OFF.
+ §b/mm pop §8- §7Deletes the closest checkpoint to player.
+ §b/mm reset §8- §fDeletes all checkpoints.
 
-    // mm check
-    ChatLib.chat("\n§3Checkpoint Guide (§b/mm check [...args§b]§3):");
-    ChatLib.chat("§8- §bSingle Argument: §7[delay][key][raise]");
-    ChatLib.chat("  §8- §bDelay: §fTimeout until key is pressed.");
-    ChatLib.chat("  §8- §bKey: §7<w, a, s, d>");
-    ChatLib.chat("  §8- §bRaise: §fTimeout until key is raised.");
-    ChatLib.chat("§8- §7Different arguments must be seperated by spaces.");
-    ChatLib.chat("§8- §fNote that the [delay] and [raise] are optional.");
+§3Caching:
+ §b/mm save [key] §8- §7Saves checkpoints as a preset.
+ §b/mm load [key] §8- §fLoads a preset of checkpoints.
+ §b/mm delete [key] §8- §7Deletes a preset of checkpoints.
+ §b/mm import [key] §8- §fImports a preset of checkpoints from clipboard.
+ §b/mm export [key] §8- §7Copies a preset of checkpoints to clipboard.
+ §b/mm list §8- §fLists all presets.
 
-    // Example
-    ChatLib.chat("\n§3Example checkpoint: §b/mm check 1a s d3");
-    ChatLib.chat(" §8- §7Waits 1 second then presses A.");
-    ChatLib.chat(" §8- §fPresses S.");
-    ChatLib.chat(" §8- §7Presses D then raises after 3 seconds.\n");
+§3Checkpoint Guide (§b/mm check [...args§b]§3):
+ §8- §bSingle Argument: §7[delay][key][raise]
+ §8- §bDelay: §fTimeout until key is pressed.
+ §8- §bKey: §7<w, a, s, d>
+ §8- §bRaise: §fTimeout until key is raised.
+ §8- §7Different arguments must be seperated by spaces.
+ §8- §fNote that the [delay] and [raise] are optional.
+
+§3Example checkpoint: §b/mm check 1a s d3
+ §8- §7Waits 1 second then presses A.
+ §8- §fPresses S.
+ §8- §7Presses D then raises after 3 seconds.\n`);
 }
 if (data.newUser) {
     help();
     data.newUser = false;
+}
+
+/**
+ * Prints a list of items to chat.
+ * 
+ * @param {Object} list - The list to be printed.
+ * @param {Number} page - The page number to display.
+ */
+function printList(list, page) {
+    if (isNaN(page)) page = 1;
+
+    ChatLib.clearChat(5858);
+    const length = Object.keys(list).length;
+    const total = Math.ceil(length / 12) || 1;
+    page = MathLib.clamp(page, 1, total);
+
+    // Print out header
+    const message = new Message("\n&c&m-----------------------------------------------------&r").setChatLineId(5858);
+    const header = ChatLib.getCenteredText(`${LOGO_1} ${page > 1 ? "<< " : ""}(Page ${page} of ${total})${page < total ? " >>" : ""}`);
+    const whitespace = header.match(/^\s+/)[0];
+    
+    const lArrow = new TextComponent("&r&e&l<<&r&9")
+        .setClickAction("run_command")
+        .setClickValue(`/mm delete ${page - 1}`)
+        .setHoverValue(`§eClick to view page ${page - 1}.`);
+    const rArrow = new TextComponent("&r&e&l>>")
+        .setClickAction("run_command")
+        .setClickValue(`/mm ${LOGO_1} list ${page + 1}`)
+        .setHoverValue(`§eClick to view page ${page + 1}.`);
+    message.addTextComponent(whitespace);
+    
+    if (page > 1) message.addTextComponent(lArrow);
+    message.addTextComponent(` §6${LOGO_1} §8(§fPage §7${page} §fof §7${total}§8) `);
+    if (page < total) message.addTextComponent(rArrow);
+
+    // Loop through variables
+    const pageIndex = (page - 1) * 12;
+    if (length === 0) message.addTextComponent(`\n` + ChatLib.getCenteredText("  §e404, This list is empty!"));
+    else {
+        const keys = Object.keys(list);
+        for (let i = pageIndex; i < Math.min(pageIndex + 12, length); i++) {
+            let key = keys[i];
+            message.addTextComponent("\n §8⁍ ");
+            message.addTextComponent(new TextComponent(`§6${key}`)
+                .setClickAction("run_command")
+                .setClickValue(`/va ${LOGO_1} remove ${key}`)
+                .setHoverValue(`§eClick to remove §b${key} §efrom list.`)
+            );
+            message.addTextComponent(new TextComponent(` §7=> §e${list[key]}`));
+        }
+    }
+
+    // Footer
+    message.addTextComponent("&c&m-----------------------------------------------------&r");
+    message.chat();
 }
 
 // Commands, very cool!
@@ -80,10 +143,7 @@ register("command", (...args) => {
 
             break;
         case "list":
-            ChatLib.chat(LOGO_1 + "§3Checkpoints:");
-            Object.keys(data.checkpoints).forEach(pos => {
-                ChatLib.chat(`§b${pos} §8=> §7${data.checkpoints[pos].join(' ')}`);
-            });
+            printList(data.checkpoints, command[1]);
             break;
         case "toggle":
             // Toggles module
