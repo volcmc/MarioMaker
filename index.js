@@ -1,7 +1,7 @@
 import RenderLib from "../RenderLib";
 import data from "./src/data";
 import { LOGO_1, LOGO_2 } from "./src/constants";
-import { runLine, setKeys } from "./src/movement";
+import { runLine, setKeys, track } from "./src/movement";
 
 
 // Checkpoint waypoint rendering

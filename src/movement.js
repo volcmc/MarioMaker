@@ -55,7 +55,7 @@ export function runLine(line) {
 }
 
 // Check for player on checkpoint every 2 seconds
-const track = register("step", () => {
+export const track = register("step", () => {
     if (executing) return;
 
     const pos = `${Player.getX().toFixed(2)}, ${Player.getY().toFixed(2)}, ${Player.getZ().toFixed(2)}`;
